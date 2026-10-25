@@ -138,6 +138,18 @@ ul{list-style:none;margin:0;padding:0}
 .mn text{fill:var(--fg);font:14px ui-sans-serif,-apple-system,"Inter","Segoe UI",sans-serif}
 .mn.r rect{fill:var(--accent);stroke:none}
 .mn.r text{fill:var(--bg);font-weight:600}
+#ss{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.4);display:grid;place-items:center;padding:16px}
+#ss[hidden]{display:none}
+.ssb{width:min(460px,100%);background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.ssb h3{margin:0 0 6px;font-size:18px}
+.ssb p{margin:0 0 12px;font-size:14px;color:var(--mute);line-height:1.5}
+.ssb input{width:100%;margin-bottom:8px;font:inherit;font-size:16px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);outline:none}
+.ssb input:focus{border-color:var(--accent)}
+#sMsg{font-size:13.5px;color:#d4543f;min-height:18px;margin-bottom:6px}
+.ssr{display:flex;gap:8px;flex-wrap:wrap}
+.ssr button{padding:6px 14px;border-radius:10px;border:1px solid var(--line);font-size:14px;color:var(--mute)}
+#sOk{background:var(--accent);color:var(--bg)!important;border-color:transparent!important;font-weight:600}
+#sync{cursor:pointer;padding:4px 0 4px 10px}
 </style>
 </head>
 <body>
@@ -158,6 +170,7 @@ ul{list-style:none;margin:0;padding:0}
 </main>
 <div class="hint">Enter new line · Tab / Shift+Tab nest · Alt+↑↓ move · ⌘/Ctrl+↑↓ fold · ⌘/Ctrl+Z undo · ⌘/Ctrl+Shift+⌫ delete · Alt+L checklist · ⌘/Ctrl+Enter done · click a bullet to zoom</div>
 <input type="file" id="file" accept=".json,application/json" hidden>
+<div id="ss" hidden><div class="ssb"><h3>Sync with Google Drive</h3><p>Paste the web app address and the secret code from your Apps Script. Every device you connect shows the same notes.</p><input id="sUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><input id="sTok" type="text" placeholder="Secret code" autocomplete="off"><div id="sMsg"></div><div class="ssr"><button id="sOk">Save and connect</button><button id="sOff">Disconnect</button><button id="sX">Close</button></div></div></div>
 <div id="toast"></div>
 <div id="ai" hidden></div>
 <div id="tb" hidden><button data-k="out" aria-label="Outdent">⇤</button><button data-k="in" aria-label="Indent">⇥</button><button data-k="up" aria-label="Move up">↑</button><button data-k="dn" aria-label="Move down">↓</button><button data-k="ck" aria-label="Checklist">☑</button><button data-k="undo" aria-label="Undo">↶</button><button data-k="redo" aria-label="Redo">↷</button><button data-k="del" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button></div>
@@ -245,7 +258,7 @@ function aiNode(){const p=path(aiT);return p&&p[p.length-1]}
 function openAI(){aiT=view==='outline'&&lastFocus&&path(lastFocus)?lastFocus:S.zoom;aiItems=[];aiErr='';aiAns='';aiQ='';aiTx='';aiBusy=false;aiRun++;$('#ai').hidden=false;drawAI()}
 function closeAI(){aiRun++;$('#ai').hidden=true}
 function drawAI(){const n=aiNode();if(!n)return closeAI();
-  if(!SM){$('#ai').innerHTML='<div class="ah"><b>✦ AI</b><button data-a="x">Close</button></div><div class="am">AI is not available in this view. Open the page while signed in to Claude and allow AI access when asked, then try again.</div><div class="cp"><span>Other AI:</span><button data-a="cb">Copy this branch</button><button data-a="cw">Copy outline</button></div>'+(aiTx?'<textarea id="aiTx" readonly rows="6">'+esc(aiTx)+'</textarea>':'');return}const nm=n.id==='root'?'Home':(n.text||'Untitled');
+  if(!SM){$('#ai').innerHTML='<div class="ah"><b>✦ AI</b><button data-a="x">Close</button></div><div class="am">The Claude AI helper is not built into this copy, but any AI works: tap Copy this branch below, paste it into Gemini, Copilot or ChatGPT, then type your request.</div><div class="cp"><span>Other AI:</span><button data-a="cb">Copy this branch</button><button data-a="cw">Copy outline</button></div>'+(aiTx?'<textarea id="aiTx" readonly rows="6">'+esc(aiTx)+'</textarea>':'');return}const nm=n.id==='root'?'Home':(n.text||'Untitled');
   $('#ai').innerHTML='<div class="ah"><b>✦ '+esc(nm)+'</b>'+(aiItems.length>1?'<button data-a="all">Add all</button>':'')+'<button data-a="x">Close</button></div><div class="chips">'+Object.keys(KINDS).map(k=>'<button data-k="'+k+'"'+(k===aiKind?' class="on"':'')+'>'+KINDS[k][0]+'</button>').join('')+'</div><div class="cp"><span>Other AI:</span><button data-a="cb">Copy this branch</button><button data-a="cw">Copy outline</button></div>'+(aiTx?'<textarea id="aiTx" readonly rows="6">'+esc(aiTx)+'</textarea>':'')+'<div class="ask"><input id="aiQ" type="text" placeholder="Ask about this item…" value="'+esc(aiQ)+'" autocomplete="off"><button data-a="ask">Ask</button></div>'+(aiAns?'<div class="ans">'+esc(aiAns)+'</div>'+(aiBusy?'':'<div class="acts"><button data-a="a2k">Add as sub-items</button><button data-a="a2n">Add to description</button></div>'):aiBusy?'<div class="am">Thinking…</div>':aiErr?'<div class="am">'+esc(aiErr)+'</div>':aiItems.length?aiItems.map((s,i)=>'<div class="sg"><span>'+esc(s)+'</span><button data-i="'+i+'" aria-label="Add">+</button></div>').join(''):'<div class="am">Pick a type to get suggestions for this item.'+(n.note?'':' Zoom into the item and add a description to sharpen them.')+'</div>')}
 const aiEr=e=>e&&e.code==='not_granted'?'Permission to use Claude was declined.':e&&e.code==='rate_limited'?'Too many requests. Try again shortly.':'Could not get an answer.';
 async function askAI(){const n=aiNode(),qq=aiQ.trim();if(!n||!SM||!qq)return;
@@ -275,23 +288,26 @@ async function runAI(k){aiKind=k;const n=aiNode();if(!n||!SM)return;if(n.id!=='r
 function addKids(t){const n=aiNode();if(!n||!t.length)return;if(n.children.length===1&&!n.children[0].text&&!n.children[0].children.length)n.children=[];t.forEach(s=>n.children.push(mk(s)));n.collapsed=false;render();save()}
 function stamp(){rev=Date.now();try{localStorage.setItem(KEY+'.rev',rev)}catch(e){}}
 function setSync(t){const e=$('#sync');if(e)e.textContent=t}
-function queuePush(){if(!dref||same())return;setSync('Saving…');clearTimeout(pt);pt=setTimeout(push,1500)}
-function snap(){const m=new Map();S.root.children.forEach(c=>m.set(c.id,JSON.stringify(c)));return m}
-function same(){const m=snap(),a=[...m.keys()],b=[...sent.keys()];return a.length===b.length&&a.every((k,i)=>k===b[i]&&m.get(k)===sent.get(k))}
-async function push(){pt=null;if(!dref||!col||pushing)return;const m=snap();if(same()){setSync('Synced');return}
-  if([...m.values()].some(s=>new Blob([s]).size>240000)){setSync('One top-level item is too large to sync');return}
+const SK=KEY+'.sync';
+let SYN=null;try{SYN=JSON.parse(localStorage.getItem(SK))}catch(e){}
+const isSync=()=>!!(SYN&&SYN.url&&SYN.token);
+async function api(body){const r=await fetch(SYN.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({token:SYN.token},body)),redirect:'follow'});if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(j.error)throw new Error(j.error);return j}
+const same=()=>JSON.stringify(S.root)===lastStr;
+function queuePush(){if(!isSync()||same())return;setSync('Saving\u2026');clearTimeout(pt);pt=setTimeout(push,1500)}
+async function push(){pt=null;if(!isSync()||pushing)return;const str=JSON.stringify(S.root);if(str===lastStr){setSync('Synced');return}
   pushing=true;const r=rev;let ok=false;
-  try{
-    for(const [k,v] of m){if(sent.get(k)!==v)await col.doc(k).set({data:v})}
-    for(const k of sent.keys())if(!m.has(k))await col.doc(k).delete();
-    await dref.set({v:2,rev:r,dev:DEV,order:[...m.keys()]});
-    sent=m;synced=r;try{localStorage.setItem(KEY+'.syn',r)}catch(e){}ok=true;setSync('Synced');
-  }catch(e){setSync(e&&e.code==='quota_exceeded'?'Sync storage full':'Sync paused')}
+  try{const j=await api({action:'save',rev:r,dev:DEV,data:str});
+    if(j.stale)await pull(false);
+    else{lastStr=str;synced=r;try{localStorage.setItem(KEY+'.syn',r)}catch(e){}ok=true;setSync('Synced')}
+  }catch(e){setSync(navigator.onLine?'Sync problem \u00b7 tap':'Offline \u00b7 will sync later')}
   pushing=false;if(ok&&!same())queuePush()}
-async function adopt(d,q){let root;
-  try{if(typeof d.data==='string')root=JSON.parse(d.data);else{const qs=await col.limit(1000).get(),mp={};qs.docs.forEach(s=>{const v=s.data();if(v&&typeof v.data==='string')mp[s.id]=v.data});root={id:'root',text:'',collapsed:false,children:(d.order||[]).map(id=>JSON.parse(mp[id]))}}}catch(e){return false}
-  if(pt||pushing)return false;
-  const ok=adoptOld({data:JSON.stringify(root),rev:d.rev},q);if(ok)sent=snap();return ok}
+async function pull(q){if(!isSync())return;
+  try{const j=await api({action:'load'});
+    if(!j.data){if(hadData||rev){if(!rev)stamp();queuePush()}else setSync('Synced');return}
+    if(j.rev>rev){clearTimeout(pt);pt=null;if(!adoptOld({data:j.data,rev:j.rev},q))setSync('Sync problem \u00b7 tap')}
+    else if(rev>j.rev)queuePush();
+    else{lastStr=JSON.stringify(S.root);synced=rev;setSync('Synced')}
+  }catch(e){setSync(navigator.onLine?'Sync problem \u00b7 tap':'Offline \u00b7 will sync later')}}
 function adoptOld(d,q){let root;try{root=JSON.parse(d.data)}catch(e){return false}if(!root||!Array.isArray(root.children))return false;
   const un=rev>synced||(synced===0&&(hadData||rev>0)),el=document.activeElement,id=el&&el.dataset&&el.dataset.id,o=el&&el.classList&&el.classList.contains('txt')?caret(el):0;
   root.id='root';S.root=root;hist();rev=d.rev;synced=d.rev;try{localStorage.setItem(KEY+'.rev',rev);localStorage.setItem(KEY+'.syn',synced)}catch(e){}
@@ -405,12 +421,9 @@ $('#bTheme').onclick=()=>{const cur=R.dataset.theme||(matchMedia('(prefers-color
 let tt;function toast(msg,act,fn){const t=$('#toast');t.textContent=msg;if(act){const b=document.createElement('button');b.textContent=act;b.onclick=()=>{fn();t.classList.remove('on')};t.append(b)}t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),act?7000:2600)}
 
 /* export / import */
-$('#bExp').onclick=async()=>{
-  const data=JSON.stringify({app:'outliner',version:1,root:S.root},null,2),name='outline-'+new Date().toISOString().slice(0,10)+'.json';
-  let d=null;try{d=window.claude&&await window.claude.use('downloads')}catch(e){}
-  if(d){try{await d.save({filename:name,data});toast('Backup ready')}catch(e){if(!e||e.code!=='declined')toast('Could not save backup')}return}
-  try{await navigator.clipboard.writeText(data);toast('Backup copied to clipboard')}catch(e){toast('Export is unavailable here')}
-};
+$('#bExp').onclick=()=>{const data=JSON.stringify({app:'outliner',version:1,root:S.root},null,2),name='outline-'+new Date().toISOString().slice(0,10)+'.json';
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.append(a);a.click();a.remove();toast('Backup saved to your downloads')}
+  catch(e){navigator.clipboard.writeText(data).then(()=>toast('Backup copied to clipboard'),()=>toast('Export failed'))}};
 $('#bImp').onclick=()=>$('#file').click();
 $('#file').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
@@ -425,7 +438,7 @@ $('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
 document.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey)||e.altKey)return;const k=e.key.toLowerCase();if(k==='z'||k==='y'){e.preventDefault();(k==='y'||e.shiftKey)?redo():undo()}});
 function setView(v){view=v;fitNext=true;$('#tOut').classList.toggle('on',v==='outline');$('#tMap').classList.toggle('on',v==='map');render();scrollTo(0,0)}
 $('#tOut').onclick=()=>setView('outline');$('#tMap').onclick=()=>setView('map');
-(async()=>{try{SM=window.claude?await window.claude.use('sample'):null}catch(e){}$('#bAI').hidden=false})();
+$('#bAI').hidden=false;
 document.addEventListener('focusin',e=>{const c=e.target.classList;if(c&&c.contains('txt'))lastFocus=e.target.dataset.id});
 $('#bAI').onclick=()=>$('#ai').hidden?openAI():closeAI();
 $('#ai').oninput=e=>{if(e.target.id==='aiQ')aiQ=e.target.value};
@@ -437,15 +450,22 @@ mp.addEventListener('touchstart',e=>{pd=e.touches.length===2?td(e.touches):0},{p
 mp.addEventListener('touchmove',e=>{if(e.touches.length===2&&pd){e.preventDefault();const t=e.touches,d=td(t);zoomBy(d/pd,(t[0].clientX+t[1].clientX)/2,(t[0].clientY+t[1].clientY)/2);pd=d}},{passive:false});
 mp.addEventListener('touchend',()=>{pd=0});
 mp.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();zoomBy(e.deltaY<0?1.1:1/1.1,e.clientX,e.clientY)}},{passive:false});
-(async()=>{try{
-  if(!window.claude)return;const d=await window.claude.use('db'),u=await window.claude.use('user');if(!d||!u)return;const id=await u.id();if(!id)return;
-  dref=d.doc('data/users/'+id+'/outline');col=d.collection('data/users/'+id+'/outline/items');const sn=await dref.get(),x=sn.exists&&sn.data();
-  if(x&&(typeof x.data==='string'||Array.isArray(x.order))){if(x.rev>rev)adopt(x,true);else if(rev>x.rev)queuePush();else{sent=snap();synced=rev;setSync('Synced')}}
-  else if(hadData||rev){if(!rev)stamp();queuePush()}else setSync('Synced');
-  dref.onSnapshot(s=>{if(!s.exists)return;const y=s.data();if(!y||y.dev===DEV||y.rev<=rev||pt||pushing)return;adopt(y)},()=>{});
-}catch(e){}})();
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(pt){clearTimeout(pt);push()}}else queuePush()});
-addEventListener('online',queuePush);
+const ssOpen=()=>{$('#sUrl').value=SYN?SYN.url:'';$('#sTok').value=SYN?SYN.token:'';$('#sMsg').textContent='';$('#ss').hidden=false};
+$('#sync').onclick=()=>{if(isSync()&&!pushing&&$('#sync').textContent.indexOf('problem')<0){queuePush();pull(false)}else ssOpen()};
+$('#sync').oncontextmenu=e=>{e.preventDefault();ssOpen()};
+$('#sX').onclick=()=>{$('#ss').hidden=true};
+$('#sOff').onclick=()=>{SYN=null;try{localStorage.removeItem(SK)}catch(e){}$('#ss').hidden=true;setSync('Set up sync');toast('Sync disconnected. Notes stay on this device')};
+$('#sOk').onclick=async()=>{const url=$('#sUrl').value.trim(),token=$('#sTok').value.trim(),m=$('#sMsg'),prev=SYN;
+  if(!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)||!token){m.textContent='Paste the full web app address (ending in /exec) and your secret code.';return}
+  SYN={url,token};m.textContent='Testing\u2026';
+  try{await api({action:'ping'});localStorage.setItem(SK,JSON.stringify(SYN));m.textContent='';$('#ss').hidden=true;setSync('Syncing\u2026');await pull(true);toast('Connected to Google Drive')}
+  catch(e){SYN=prev;m.textContent=e.message==='wrong code'?'The secret code does not match the one in your script.':'Could not reach the script. Check the address, and that access is set to Anyone.'}};
+setSync(isSync()?'':'Set up sync');
+if(isSync())pull(true);
+setInterval(()=>{if(!document.hidden&&isSync()&&!pushing&&!pt)pull(false)},45000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(pt){clearTimeout(pt);push()}}else if(isSync()){queuePush();if(!pushing&&!pt)pull(false)}});
+addEventListener('online',()=>{if(isSync()){queuePush();pull(false)}});
+
 const tb=$('#tb');
 function posTb(){const v=window.visualViewport;if(v)tb.style.bottom=Math.max(0,window.innerHeight-v.height-v.offsetTop)+'px'}
 if(window.visualViewport){visualViewport.addEventListener('resize',posTb);visualViewport.addEventListener('scroll',posTb)}
